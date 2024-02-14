@@ -52,6 +52,8 @@ router.get('/products', async (req, res) => {
     }
 });
 
+
+
 //USER
 router.get('/users', async (req, res) => {
     if (req.session.user && req.session.user.admin === true) {

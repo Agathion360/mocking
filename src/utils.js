@@ -33,3 +33,9 @@ export const authToken = (req, res, next) => {
         next();
     });
 };
+
+export const catcher = (fn) => {
+    return (req, res, next) => {
+        fn(req, res).catch(err => next(err));
+    };
+}

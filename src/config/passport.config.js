@@ -1,10 +1,9 @@
-
-
 import passport from 'passport'
 import LocalStrategy from 'passport-local'
 import GithubStrategy from 'passport-github2'
 import userModel from '../models/user.models.js'
 import { createHash, isValidPassword } from '../utils.js'
+import config from '../config.js'
 
 const initPassport = () => {
     // Función utilizada por la estrategia registerAuth
@@ -100,9 +99,10 @@ const initPassport = () => {
 
     // Creamos estrategia para autenticación externa con Github
     passport.use('githubAuth', new GithubStrategy({
-        clientID: 'Iv1.2bdf8d1969e29c8d',
-        clientSecret: '928b7e215533c54d3243601cd843753dfbdd95bf',
-        callbackURL: 'http://localhost:8080/api/sessions/githubcallback'
+        clientID: config.CLIENT_ID,
+        clientSecret: config.CLIENT_SECRET,
+        callbackURL: config.CALLBACK_URL,
+        
     }, verifyGithub))
         
     passport.serializeUser((user, done) => {

@@ -1,7 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import handlebars from 'express-handlebars';
-import { Server } from 'socket.io';
 import session from 'express-session'
 import FileStore from 'session-file-store'
 import MongoStore from 'connect-mongo'
@@ -9,24 +8,23 @@ import passport from 'passport'
 
 import { __dirname } from './utils.js';
 import productRouter from './routes/products.routes.js';
-import Carts from './models/carts.models.js';
 import path from 'path';
-import productsModel from './models/products.model.js';
+import { initializeSocket } from './config/socket.config.js';
 import viewRouter from './routes/views.routes.js';
 import cartsRouter from './routes/carts.routes.js';
 import chatRouter from './routes/chat.routes.js';
-import ChatMessage from './models/chat.models.js';
+import productsModel from './models/products.model.js';
+
 import ProfileController from './controllers/profile.controller.js';
 import registerRoutes from './routes/register.routes.js';
 import registerViews from './routes/register.views.routes.js';
 import sessionRoutes from './routes/sessions.routes.js';
+import config from './config.js';
 
 
 
 
-const chat_messages = []
-const PORT = 8080;
-const MONGOOSE = 'mongodb+srv://carrizo38:Parana149@cluster0.z2rdlx9.mongodb.net/ecomerce'
+
 
 const app = express();
 app.use(express.json());
@@ -38,11 +36,15 @@ const profileController = new ProfileController();
 
 app.use(session({
    
-    store: MongoStore.create({ mongoUrl: MONGOOSE, mongoOptions: {}, ttl: 60, clearInterval: 5000 }), // MONGODB
+    store: MongoStore.create({ mongoUrl: config.mongooseConnect, mongoOptions: {}, ttl: 60, clearInterval: 5000 }), // MONGODB
     secret: 'secretKeyAbc123',
     resave: false,
     saveUninitialized: false
 }))
+
+
+
+
 
 app.use(passport.initialize())
 app.use(passport.session())
@@ -87,90 +89,16 @@ app.get('/profile', auth, profileController.showProfile);
   
 
 try{
-    await mongoose.connect(MONGOOSE)
+    await mongoose.connect(config.mongooseConnect)
     
-    const server = app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`http://localhost:${PORT}`);
+    const server = app.listen(config.PORT, () => {
+        console.log(`Server running on port ${config.PORT}`);
+        console.log(`http://localhost:${config.PORT}`);
     });
  
-    const io = new Server(server);
- 
-    io.on('connection', socket => {
-        console.log('Conexión con Socket.io');
+    initializeSocket(server);
 
 
-        const itemsPerPage = 10;
-        socket.on('load', async ({ page }) => {
-            try {
-              const options = {
-                limit: itemsPerPage,
-                page,
-                lean: true,
-              };
-        
-              const products = await productsModel.paginate({}, options);
-              const totalPages = Math.ceil(products.total / itemsPerPage);
-        
-              socket.emit('products', { products: products.docs, totalPages });
-            } catch (error) {
-              console.error('Error al obtener productos paginados:', error);
-              socket.emit('error', { message: 'Error al obtener productos paginados' });
-            }
-          });
-        
-        
-        socket.on('pageChanged', async newPage => {
-            try {
-                const options = {
-                    limit: itemsPerPage,
-                    page: newPage,
-                    lean: true
-                };
-        
-                const products = await productsModel.paginate({}, options);
-                io.emit('products', products);
-            } catch (error) {
-                console.error('Error al obtener productos paginados:', error);
-            }
-        });
-        
-
-        socket.on('carts', async () => {
-            const carts = await Carts.find();
-            socket.emit('carts', carts);
-        });
-
-        socket.on('message', data => {
-            chat_messages.push(data)
-            io.emit('messageLogs', chat_messages)
-        });
-        socket.on('message', async data => {
-            const chatMessage = new ChatMessage(data);
-            await chatMessage.save();        
-            socket.broadcast.emit('newMessage', data);
-
-        });
-
-        socket.on('addToCart', async data => {
-            if (data.product) {
-                cart.push(data.product);
-                io.emit('cartUpdated', cart);
-            } else if (data.productId) {
-                const product = await controller.getProductById(data.productId);
-                if (!product.error) {
-                    cart.push(product);
-                    io.emit('cartUpdated', cart);
-                }
-            }
-        });
-        
-   
-
-        
-        
-    });
- 
  }catch(error){
      console.error("Error al conectar a la base de datos:", error.message)
 }
